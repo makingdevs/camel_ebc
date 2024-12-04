@@ -7,4 +7,13 @@ import org.apache.camel.CamelContext
 import org.apache.camel.impl.DefaultCamelContext
 import org.apache.camel.builder.RouteBuilder
 
-println "Hola mundo"
+CamelContext context = new DefaultCamelContext()
+
+context.addRoutes()
+
+println "Fin de rutas"
+context.start()
+Thread.sleep(5000)
+context.stop()
+
+println "Fin de rutas"
