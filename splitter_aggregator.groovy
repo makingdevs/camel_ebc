@@ -1,43 +1,49 @@
 @GrabConfig(systemClassLoader=true)
 @Grapes([
   @Grab(group='org.apache.camel', module='camel-core', version='4.8.1'),
-  @Grab(group='ch.qos.logback', module='logback-classic', version='1.5.12')
+  @Grab(group='org.apache.camel', module='camel-jms', version='4.8.1'),
+  @Grab(group='org.apache.activemq', module='activemq-all', version='5.16.5'),
+  @Grab(group='org.glassfish.jaxb', module='jaxb-runtime', version='4.0.5'),
+  @Grab(group='ch.qos.logback', module='logback-classic', version='1.5.12'),
+  @Grab(group='org.glassfish.jaxb', module='jaxb-runtime', version='4.0.5'),
+  @Grab(group='javax.xml.bind', module='jaxb-api', version='2.3.1')
 ])
 
 import org.apache.camel.CamelContext
 import org.apache.camel.impl.DefaultCamelContext
 import org.apache.camel.builder.RouteBuilder
 import org.apache.camel.processor.aggregate.GroupedExchangeAggregationStrategy
+import org.apache.camel.component.jms.JmsComponent
+import org.apache.activemq.ActiveMQConnectionFactory
+import javax.jms.*
+
+// Configuración de ActiveMQ
+String brokerUrl = "tcp://localhost:61616"
+// Crear una conexión a ActiveMQ
+ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(brokerUrl)
 
 CamelContext camelContext = new DefaultCamelContext()
+camelContext.addComponent("jms", JmsComponent.jmsComponentAutoAcknowledge(connectionFactory))
 
 camelContext.addRoutes(new RouteBuilder() {
   @Override
   void configure() {
-    from("direct:orders")
+    from("jms:queue:orders")
       .log("Mensaje recibido: ${body()}")
       .split(body())
       .log("Mensaje partido: ${body()}")
       .aggregate(header("group"), new GroupedExchangeAggregationStrategy())
       .completionSize(3)
       .log("Mensaje agrupado: ${body()}")
-      .to("mock:result")
+      .setBody(simple("Agrupado: ${body()}"))
+      .to("jms:queue:aggregateOrders")
   }
 })
 
 camelContext.start()
 
-def orders = [
-  [id: 1, type: 'electronic', group: 'A'],
-  [id: 2, type: 'clothes', group: 'B'],
-  [id: 3, type: 'electronic', group: 'A'],
-  [id: 4, type: 'clothes', group: 'B'],
-  [id: 5, type: 'electronic', group: 'A'],
-  [id: 6, type: 'clothes', group: 'B']
-]
-
-def producerTemplate = camelContext.createProducerTemplate()
-producerTemplate.sendBodyAndHeader("direct:orders", orders, "group", "A")
+// def producerTemplate = camelContext.createProducerTemplate()
+// producerTemplate.sendBodyAndHeader("direct:orders", orders, "group", "A")
 
 addShutdownHook {
   camelContext.stop()
