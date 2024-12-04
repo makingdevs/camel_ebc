@@ -7,19 +7,39 @@
 import org.apache.camel.CamelContext
 import org.apache.camel.impl.DefaultCamelContext
 import org.apache.camel.builder.RouteBuilder
+import org.apache.camel.processor.aggregate.GroupedExchangeAggregationStrategy
 
-CamelContext context = new DefaultCamelContext()
+CamelContext camelContext = new DefaultCamelContext()
 
-context.addRoutes(new RouteBuilder() {
+camelContext.addRoutes(new RouteBuilder() {
   @Override
   void configure() {
+    from("direct:orders")
+      .log("Mensaje recibido: ${body()}")
+      .split(body())
+      .log("Mensaje partido: ${body()}")
+      .aggregate(header("group"), new GroupedExchangeAggregationStrategy())
+      .completionSize(3)
+      .log("Mensaje agrupado: ${body()}")
+      .to("mock:result")
   }
 })
 
+camelContext.start()
 
-context.start()
+def orders = [
+  [id: 1, type: 'electronic', group: 'A'],
+  [id: 2, type: 'clothes', group: 'B'],
+  [id: 3, type: 'electronic', group: 'A'],
+  [id: 4, type: 'clothes', group: 'B'],
+  [id: 5, type: 'electronic', group: 'A'],
+  [id: 6, type: 'clothes', group: 'B']
+]
+
+def producerTemplate = camelContext.createProducerTemplate()
+producerTemplate.sendBodyAndHeader("direct:orders", orders, "group", "A")
 
 addShutdownHook {
-  context.stop()
+  camelContext.stop()
 }
 synchronized(this) { this.wait() }
