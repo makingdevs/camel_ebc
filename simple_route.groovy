@@ -10,7 +10,13 @@ import org.apache.camel.builder.RouteBuilder
 
 CamelContext context = new DefaultCamelContext()
 
-// context.addRoutes()
+context.addRoutes(new RouteBuilder() {
+  @Override
+  void configure() {
+    from("file://input")
+      .to("file://output")
+  }
+})
 
 println "Comienzo Camel Context"
 
