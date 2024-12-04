@@ -14,6 +14,7 @@ context.addRoutes(new RouteBuilder() {
   @Override
   void configure() {
     from("file://input")
+      .setBody(body().append("${new Date()}"))
       .to("file://output")
   }
 })
