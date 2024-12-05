@@ -28,15 +28,27 @@ camelContext.addComponent("jms", JmsComponent.jmsComponentAutoAcknowledge(connec
 camelContext.addRoutes(new RouteBuilder() {
   @Override
   void configure() {
+    // from("jms:queue:orders")
+    //   .log("Mensaje recibido: ${body()}")
+    //   .split(body())
+    //   .log("Mensaje partido: ${body()}")
+    //   .aggregate(header("group"), new GroupedExchangeAggregationStrategy())
+    //   .completionSize(3)
+    //   .log("Mensaje agrupado: ${body()}")
+    //   .setBody(simple("Agrupado: ${body()}"))
+    //   .to("jms:queue:aggregateOrders")
+
     from("jms:queue:orders")
-      .log("Mensaje recibido: ${body()}")
-      .split(body())
-      .log("Mensaje partido: ${body()}")
-      .aggregate(header("group"), new GroupedExchangeAggregationStrategy())
-      .completionSize(3)
-      .log("Mensaje agrupado: ${body()}")
-      .setBody(simple("Agrupado: ${body()}"))
-      .to("jms:queue:aggregateOrders")
+      .choice()
+        .when(simple("\${header.type} == 'electronics'"))
+          .to("jms:queue:electronics")
+          .log("Mensaje de electronica: ${body()}")
+        .when(simple("\${header.type} == 'clothing'"))
+          .to("jms:queue:clothing")
+          .log("Mensaje de ropa: ${body()}")
+        .otherwise()
+          .to("jms:queue:other")
+          .log("Mensaje de otros: ${body()}")
   }
 })
 
