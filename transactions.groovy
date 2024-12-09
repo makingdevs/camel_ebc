@@ -25,6 +25,9 @@ def dataSource = new BasicDataSource(driverClassName: dbDriver, url: dbUrl)
 CamelContext camelContext = new DefaultCamelContext()
 camelContext.registry.bind("transactions_db", dataSource)
 
+// @Autowired
+// TransactionManager transactionManager
+
 PlatformTransactionManager transactionManager = new DataSourceTransactionManager(dataSource)
 camelContext.registry.bind("transactionManager", transactionManager)
 
@@ -64,6 +67,8 @@ camelContext.addRoutes(new RouteBuilder() {
         def sql = "INSERT INTO transactions(description, status) VALUES ('${body}', 'SUCCESS')"
         exchange.in.setBody(sql)
       }
+      .to('file://insertions?fileName=data-${date:now:dd-MM-yyyyHH:mm:ss}.txt')
+      //.to("jms:queue:insertions")
       .to("jdbc:transactions_db")
   }
 })
